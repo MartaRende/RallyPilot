@@ -17,6 +17,8 @@ print("Devide for torch is : " + str(device))
 print(f"Initialized {len(clients)} clients")
 
 
+CURR_MODEL_NAME = "4_forward_22_back"
+
 LOSS_FN_WEIGHT = torch.tensor([0.4, 2.2, 1, 1])
 LOSS_FN_WEIGHT = LOSS_FN_WEIGHT.to(device)
 LEARNING_RATE = 0.001
@@ -162,15 +164,10 @@ for n in range(N_EPOCH):
     if (n + 1) % 10 == 0:
         print(f"Epoch n°{n}")
 
-index = 0
-BASE_PATH = "./models/try"
-END_PATH = ".pickle"
-currPath = f"{BASE_PATH}{index}{END_PATH}"
 
-
-def getGraphs(trainAcc, testAcc, currModelName):
-    folderPath = "./learningCurves/" + currModelName + "/"
-    os.mkdir(folderPath)
+def getGraphs(trainAcc, testAcc, currPath):
+    fullPath = currPath + "graphs/"
+    os.mkdir(fullPath)
     for c in clients:
         currTrain = trainAcc[c.clientNumber]
         currTest = testAcc[c.clientNumber]
@@ -181,11 +178,16 @@ def getGraphs(trainAcc, testAcc, currModelName):
         plt.plot(x, yTrain)
         plt.plot(x, yTest)
         plt.legend(["Train", "Test"])
-        plt.savefig(f"{folderPath}client{c.clientNumber}.png")
+        plt.savefig(f"{fullPath}client{c.clientNumber}.png")
 
 
+index = 0
+BASE_PATH = "./models/"
+FILENAME = "model.pickle"
+currPath = f"{BASE_PATH}{CURR_MODEL_NAME}/"
 while os.path.exists(currPath):
     index += 1
-    currPath = f"{BASE_PATH}{index}{END_PATH}"
-torch.save(currModel.state_dict(), currPath)
-getGraphs(trainAccs, testAccs, "try" + str(index))
+    currPath = f"{BASE_PATH}{CURR_MODEL_NAME}{index}/"
+os.mkdir(currPath)
+torch.save(currModel.state_dict(), currPath + FILENAME)
+getGraphs(trainAccs, testAccs, currPath)
