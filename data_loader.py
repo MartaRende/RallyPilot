@@ -5,11 +5,12 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
-
+BATCH_SIZE = 64
 BASE_FOLDER = "./data/client"
 TEST_RATIO = 0.2
 PERCENT_BATCH = 0.1
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def transformData(data):
     X = [list(x.raycast_distances) + [x.car_speed] for x in data]
@@ -44,18 +45,20 @@ class ClientLoader:
     def createLoader(self, X, y):
         self.trainLoaders = []
         xTensor = torch.tensor(X, dtype=torch.float32)
+        xTensor = xTensor.to(device)
         yTensor = torch.tensor(y, dtype=torch.float32)
+        yTensor = yTensor.to(device)
         dataset = TensorDataset(xTensor, yTensor)
         train_size = int(1 - TEST_RATIO * len(dataset))
         test_size = len(dataset) - train_size
         trainData, testData = random_split(dataset, [train_size, test_size])
-        self.testLoader = DataLoader(testData, batch_size=32)
+        self.testLoader = DataLoader(testData, batch_size=BATCH_SIZE)
         batchSize = int(PERCENT_BATCH * len(trainData))
         currData = trainData
         for i in range(int(1 / PERCENT_BATCH)):
             restSize = len(currData) - batchSize
             currBatch, currData = random_split(currData, [batchSize, restSize])
-            self.trainLoaders.append(DataLoader(currBatch, batch_size=32))
+            self.trainLoaders.append(DataLoader(currBatch, batch_size=BATCH_SIZE))
 
 
 class CSVClientLoader(ClientLoader):

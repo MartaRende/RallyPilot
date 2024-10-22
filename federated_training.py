@@ -10,10 +10,15 @@ clients = [ClientLoader(x) for x in range(1, 7)]
 clients.append(CSVClientLoader(7))
 
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print("Devide for torch is : " + str(device))
+
+
 print(f"Initialized {len(clients)} clients")
 
 
-LOSS_FN_WEIGHT = torch.tensor([0.5, 2.5, 1, 1])
+LOSS_FN_WEIGHT = torch.tensor([0.5, 2, 1, 1])
+LOSS_FN_WEIGHT = LOSS_FN_WEIGHT.to(device)
 LEARNING_RATE = 0.001
 
 
@@ -33,9 +38,11 @@ def mean_tensors(tensors):
 
 
 def trainBaseModel():
-    baseModel = MLP()
+    baseModel = MLP(device)
+    baseModel = baseModel.to(device)
     optimizer = torch.optim.Adam(baseModel.parameters(), lr=LEARNING_RATE)
     loss_fn = nn.CrossEntropyLoss(LOSS_FN_WEIGHT)
+    loss_fn = loss_fn.to(device)
 
     # We can take the first train loader of each client to train base model -> this equals to training it on 10% of data for each client
     baseModel.train()
@@ -61,7 +68,8 @@ def trainBaseModel():
 
 def doTrainingOnClient(args) -> MLP:
     c, model, stepN = args
-    currModel = MLP()
+    currModel = MLP(device)
+    currModel.to(device)
     currModel.load_state_dict(model.state_dict())
     loss_fn = nn.CrossEntropyLoss(LOSS_FN_WEIGHT)
     optimizer = torch.optim.Adam(currModel.parameters(), lr=LEARNING_RATE)
@@ -78,27 +86,20 @@ def doTrainingOnClient(args) -> MLP:
 
 def doTrainingStep(model: MLP, stepN) -> MLP:
     models: list[MLP] = []
-    pool = mp.Pool(len(clients))
-    parameters = [(x, model, stepN) for x in clients]
-    models = pool.map(doTrainingOnClient, parameters)
-    pool.close()
-    pool.join()
-    # for c in clients:
-    #     currModel = MLP()
-    #     currModel.load_state_dict(model.state_dict())
-    #     loss_fn = nn.CrossEntropyLoss(LOSS_FN_WEIGHT)
-    #     optimizer = torch.optim.Adam(currModel.parameters(), lr=LEARNING_RATE)
-    #     currModel.train()
-    #     for X, y in c.trainLoaders[stepN]:
-    #         optimizer.zero_grad()
-    #         y_pred = currModel(X)
-    #         loss = loss_fn(y_pred, y)
-    #         y_pred = (y_pred > 0.5).float()
-    #         correct += (y_pred == y).sum().item()
-    #         total += y.size(0) * y.size(1)
-    #         loss.backward()
-    #         optimizer.step()
-    #     models.append(currModel)
+    for c in clients:
+        currModel = MLP(device)
+        currModel.load_state_dict(model.state_dict())
+        loss_fn = nn.CrossEntropyLoss(LOSS_FN_WEIGHT)
+        optimizer = torch.optim.Adam(currModel.parameters(), lr=LEARNING_RATE)
+        currModel.train()
+        for X, y in c.trainLoaders[stepN]:
+            optimizer.zero_grad()
+            y_pred = currModel(X)
+            loss = loss_fn(y_pred, y)
+            y_pred = (y_pred > 0.5).float()
+            loss.backward()
+            optimizer.step()
+        models.append(currModel)
     dicts = [x.state_dict() for x in models]
     new_state_dict = {}
     for k in list(model.state_dict().keys()):
@@ -106,7 +107,7 @@ def doTrainingStep(model: MLP, stepN) -> MLP:
         for d in dicts:
             tensors.append(d[k])
         new_state_dict[k] = mean_tensors(tensors)
-    resModel = MLP()
+    resModel = MLP(device)
     resModel.load_state_dict(new_state_dict)
     return resModel
 
@@ -145,7 +146,7 @@ baseModel = trainBaseModel()
 currModel = baseModel
 trainAccs = {}
 testAccs = {}
-N_EPOCH = 100
+N_EPOCH = 10
 
 for c in clients:
     trainAccs[c.clientNumber] = []
