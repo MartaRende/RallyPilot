@@ -56,7 +56,6 @@ def trainBaseModel():
             optimizer.step()
         client_acc[c.clientNumber] = correct / total
     print(f"Base training done, acc was : {client_acc}")
-    torch.save(baseModel.state_dict(), "./models/try.pickle")
     return baseModel
 
 
