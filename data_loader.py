@@ -9,11 +9,13 @@ BATCH_SIZE = 64
 BASE_FOLDER = "./data/client"
 TEST_RATIO = 0.2
 PERCENT_BATCH = 0.1
+SPEED_WEIGHT = 7
+
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def transformData(data):
-    X = [list(x.raycast_distances) + [x.car_speed] for x in data]
+    X = [list(x.raycast_distances) + [x.car_speed * SPEED_WEIGHT] for x in data]
     y = [x.current_controls for x in data]
     return X, y
 
@@ -71,7 +73,7 @@ class CSVClientLoader(ClientLoader):
                 l = r.to_list()
                 res = []
                 res += l[1:16]
-                res.append(l[0])
+                res.append(l[0] * SPEED_WEIGHT)
                 assert len(res) == 16
                 X.append(res)
                 y.append(l[16:21])
