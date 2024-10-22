@@ -9,7 +9,7 @@ BATCH_SIZE = 64
 BASE_FOLDER = "./data/client"
 TEST_RATIO = 0.2
 PERCENT_BATCH = 0.1
-SPEED_WEIGHT = 7
+SPEED_WEIGHT = 1
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
