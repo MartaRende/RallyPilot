@@ -17,7 +17,7 @@ print("Devide for torch is : " + str(device))
 print(f"Initialized {len(clients)} clients")
 
 
-LOSS_FN_WEIGHT = torch.tensor([0.5, 2.3, 1, 1])
+LOSS_FN_WEIGHT = torch.tensor([0.2, 2.3, 1, 1])
 LOSS_FN_WEIGHT = LOSS_FN_WEIGHT.to(device)
 LEARNING_RATE = 0.001
 
