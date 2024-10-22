@@ -1,8 +1,10 @@
 
 
 from PyQt6 import QtWidgets
-
+import torch
+from data_loader import SPEED_WEIGHT
 from data_collector import DataCollectionUI
+from model import MLP
 """
 This file is provided as an example of what a simplistic controller could be done.
 It simply uses the DataCollectionUI interface zo receive sensing_messages and send controls.
@@ -14,16 +16,42 @@ Be warned that this could also cause crash on the client side if socket sending 
 /!\ Do not work directly in this file (make a copy and rename it) to prevent future pull from erasing what you write here.
 """
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+print(device)
+number = 0
+BASE_PATH = "./models/"
+MODEL_FILENAME = "model.pickle"
+MODEL_NAMES = [f"4_forward_22_back"]
+
+weights = [1]
+models = []
+for f in MODEL_NAMES:
+    model = MLP(device)
+    model.load_state_dict(torch.load(f"{BASE_PATH}{f}/{MODEL_FILENAME}", map_location=device))
+    models.append(model)
+    
 class ExampleNNMsgProcessor:
     def __init__(self):
         self.always_forward = True
 
     def nn_infer(self, message):
-        #   Do smart NN inference here
-
-
-        return [("forward", True)]
+        input = list(message.raycast_distances) + [message.car_speed]
+        input = torch.tensor(input).to(device)
+        input = input.unsqueeze(0)
+        preds = [0,0,0,0]
+        for i, m in enumerate(models):
+            currInput = input.clone()
+            currInput[0][15] = currInput[0][15] * m.SPEED_WEIGHT[0]
+            for j, a in enumerate(m(currInput)[0]):
+                preds[j] += a.item() * weights[i]
+        
+        return [
+            ("forward", preds[0] > 0.5),
+            ("back", preds[1] > 0.5),
+            ("left", preds[2] > 0.5),
+            ("right", preds[3] > 0.5),
+            ]
 
     def process_message(self, message, data_collector):
 
