@@ -1,7 +1,7 @@
 import os.path
 import torch
 from torch import nn
-from data_loader import ClientLoader, CSVClientLoader
+from data_loader import ClientLoader, CSVClientLoader, SPEED_WEIGHT
 from model import MLP
 import multiprocessing as mp
 import matplotlib.pyplot as plt
