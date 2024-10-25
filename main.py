@@ -26,7 +26,7 @@ global_models = [ "sports-car.obj", "particles.obj",  "line.obj"]
 global_texs = [ "sports-red.png", "particle_forest_track.png", "red.png"]
 
 # Starting new thread for assets
-track_metadata = "notsosimple_track_metadata.json"
+track_metadata = "assets/SlightlyHarder/track_metadata.json"
 track = Track(track_metadata)
 track.load_assets(global_models, global_texs)
 
