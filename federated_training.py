@@ -17,9 +17,9 @@ print("Devide for torch is : " + str(device))
 print(f"Initialized {len(clients)} clients")
 
 
-CURR_MODEL_NAME = "4_forward_22_back"
+CURR_MODEL_NAME = "5_forward_22_back"
 
-LOSS_FN_WEIGHT = torch.tensor([0.4, 2.2, 1, 1])
+LOSS_FN_WEIGHT = torch.tensor([0.5, 2.2, 1, 1])
 LOSS_FN_WEIGHT = LOSS_FN_WEIGHT.to(device)
 LEARNING_RATE = 0.001
 
