@@ -24,7 +24,7 @@ BASE_PATH = "./models/"
 MODEL_FILENAME = "model.pickle"
 MODEL_NAMES = [f"5_forward_23_back", "6_forward_27_back"]
 
-weights = [0.7, 0.3]
+weights = [0.8, 0.2]
 models = []
 for f in MODEL_NAMES:
     model = MLP(device)
