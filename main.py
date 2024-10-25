@@ -11,7 +11,7 @@ from track import Track
 
 # Window
 window.vsync = True # Set to false to uncap FPS limit of 60
-app = Ursina(size=(1280,1024))
+app = Ursina(size=(200,300))
 window.title = "Rally"
 window.borderless = False
 window.show_ursina_splash = False
@@ -45,7 +45,7 @@ car.multiray_sensor.enable()
 sun = SunLight(direction = (-0.7, -0.9, 0.5), resolution = 3072, car = car)
 ambient = AmbientLight(color = Vec4(0.5, 0.55, 0.66, 0) * 0.75)
 
-render.setShaderAuto()
+#render.setShaderAuto()
 
 # Sky
 Sky(texture = "sky")

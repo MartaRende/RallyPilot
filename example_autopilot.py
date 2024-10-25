@@ -22,14 +22,15 @@ print(device)
 number = 0
 BASE_PATH = "./models/"
 MODEL_FILENAME = "model.pickle"
-MODEL_NAMES = [f"4_forward_22_back"]
+MODEL_NAMES = [f"5_forward_23_back", "6_forward_27_back"]
 
-weights = [1]
+weights = [0.7, 0.3]
 models = []
 for f in MODEL_NAMES:
     model = MLP(device)
     model.load_state_dict(torch.load(f"{BASE_PATH}{f}/{MODEL_FILENAME}", map_location=device))
     models.append(model)
+   
     
 class ExampleNNMsgProcessor:
     def __init__(self):
@@ -45,6 +46,10 @@ class ExampleNNMsgProcessor:
             currInput[0][15] = currInput[0][15] * m.SPEED_WEIGHT[0]
             for j, a in enumerate(m(currInput)[0]):
                 preds[j] += a.item() * weights[i]
+        
+        if abs(message.car_speed) < 3 and preds[0] < 0.5:
+            preds[0] = 1
+            preds[1] = 0
         
         return [
             ("forward", preds[0] > 0.5),
