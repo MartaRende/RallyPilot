@@ -17,12 +17,12 @@ print("Devide for torch is : " + str(device))
 print(f"Initialized {len(clients)} clients")
 
 
-CURR_MODEL_NAME = "4_forward_25_back"
+CURR_MODEL_NAME = "model_for_graphs"
 
 LOSS_FN_WEIGHT = torch.tensor([0.4, 2.5, 1, 1])
 LOSS_FN_WEIGHT = LOSS_FN_WEIGHT.to(device)
-LEARNING_RATE = 0.001
-N_EPOCH = 50
+LEARNING_RATE = 0.0005
+N_EPOCH = 30
 
 
 def printEpochAcc(epochAcc: list[dict[int, float]]):
@@ -55,7 +55,7 @@ def trainBaseModel():
     for c in clients:
         correct = 0
         total = 0
-        for X, y in c.trainLoaders.pop(0):
+        for X, y in c.trainLoaders[0]:
             optimizer.zero_grad()
             y_pred = baseModel(X)
             loss = loss_fn(y_pred, y)
@@ -119,6 +119,10 @@ def evaluateClients(currModel: MLP):
     currModel.eval()
     trainAcc = {}
     testAcc = {}
+    totalTrainEntries = 0
+    totalTrainEntriesClients = {}
+    totalTestEntries = 0
+    totalTestEntriesClients = {}
     with torch.no_grad():
         for c in clients:
             correct = 0
@@ -131,6 +135,8 @@ def evaluateClients(currModel: MLP):
                     correct += (y_pred == y).sum().item()
                     total += y.size(0) * y.size(1)
             trainAcc[c.clientNumber] = correct / total
+            totalTrainEntriesClients[c.clientNumber] = total
+            totalTrainEntries += total
             correct = 0
             total = 0
             for X, y in c.testLoader:
@@ -140,7 +146,24 @@ def evaluateClients(currModel: MLP):
                 correct += (y_pred == y).sum().item()
                 total += y.size(0) * y.size(1)
             testAcc[c.clientNumber] = correct / total
-    return trainAcc, testAcc
+            totalTestEntriesClients[c.clientNumber] = total
+            totalTestEntries += total
+
+    globTrainAcc = 0
+    globTestAcc = 0
+    for c in clients:
+        globTrainAcc += (
+            trainAcc[c.clientNumber]
+            * totalTrainEntriesClients[c.clientNumber]
+            / totalTrainEntries
+        )
+        globTestAcc += (
+            testAcc[c.clientNumber]
+            * totalTestEntriesClients[c.clientNumber]
+            / totalTestEntries
+        )
+
+    return trainAcc, testAcc, globTrainAcc, globTestAcc
 
 
 # At first, we train a basic model on 10% of all the datas
@@ -149,15 +172,19 @@ baseModel = trainBaseModel()
 currModel = baseModel
 trainAccs = {}
 testAccs = {}
+globTrainAcc = []
+globTestAcc = []
 
 for c in clients:
     trainAccs[c.clientNumber] = []
     testAccs[c.clientNumber] = []
 
 for n in range(N_EPOCH):
-    for i in range(9):
+    for i in range(10):
         currModel = doTrainingStep(currModel, i)
-    trainAcc, testAcc = evaluateClients(currModel)
+    trainAcc, testAcc, globTrain, globTest = evaluateClients(currModel)
+    globTrainAcc.append(globTrain)
+    globTestAcc.append(globTest)
     for c in trainAcc.keys():
         trainAccs[c].append(trainAcc[c])
         testAccs[c].append(testAcc[c])
@@ -165,9 +192,14 @@ for n in range(N_EPOCH):
         print(f"Epoch n°{n+1}")
 
 
-def getGraphs(trainAcc, testAcc, currPath):
+def getGraphs(trainAcc, testAcc, currPath, globTrainAcc, globTestAcc):
     fullPath = currPath + "graphs/"
     os.mkdir(fullPath)
+    plt.figure()
+    plt.plot(range(len(globTrainAcc)), globTrainAcc)
+    plt.plot(range(len(globTestAcc)), globTestAcc)
+    plt.legend(["Train", "Test"])
+    plt.savefig(f"{fullPath}global.png")
     for c in clients:
         currTrain = trainAcc[c.clientNumber]
         currTest = testAcc[c.clientNumber]
@@ -190,4 +222,4 @@ while os.path.exists(currPath):
     currPath = f"{BASE_PATH}{CURR_MODEL_NAME}{index}/"
 os.mkdir(currPath)
 torch.save(currModel.state_dict(), currPath + FILENAME)
-getGraphs(trainAccs, testAccs, currPath)
+getGraphs(trainAccs, testAccs, currPath, globTestAcc, globTrainAcc)
