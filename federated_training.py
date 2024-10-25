@@ -17,12 +17,12 @@ print("Devide for torch is : " + str(device))
 print(f"Initialized {len(clients)} clients")
 
 
-CURR_MODEL_NAME = "5_forward_24_back"
+CURR_MODEL_NAME = "5_forward_23_back"
 
-LOSS_FN_WEIGHT = torch.tensor([0.5, 2.4, 1, 1])
+LOSS_FN_WEIGHT = torch.tensor([0.5, 2.3, 1, 1])
 LOSS_FN_WEIGHT = LOSS_FN_WEIGHT.to(device)
 LEARNING_RATE = 0.001
-N_EPOCH = 70
+N_EPOCH = 50
 
 
 def printEpochAcc(epochAcc: list[dict[int, float]]):
@@ -162,7 +162,7 @@ for n in range(N_EPOCH):
         trainAccs[c].append(trainAcc[c])
         testAccs[c].append(testAcc[c])
     if (n + 1) % 10 == 0:
-        print(f"Epoch n°{n}")
+        print(f"Epoch n°{n+1}")
 
 
 def getGraphs(trainAcc, testAcc, currPath):
