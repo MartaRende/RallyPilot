@@ -75,6 +75,7 @@ def doTrainingOnClient(args) -> MLP:
     currModel.to(device)
     currModel.load_state_dict(model.state_dict())
     loss_fn = nn.CrossEntropyLoss(LOSS_FN_WEIGHT)
+    loss_fn.to(device)
     optimizer = torch.optim.Adam(currModel.parameters(), lr=LEARNING_RATE)
     currModel.train()
     for X, y in c.trainLoaders[stepN]:
@@ -93,6 +94,7 @@ def doTrainingStep(model: MLP, stepN) -> MLP:
         currModel = MLP(device)
         currModel.load_state_dict(model.state_dict())
         loss_fn = nn.CrossEntropyLoss(LOSS_FN_WEIGHT)
+        loss_fn.to(device)
         optimizer = torch.optim.Adam(currModel.parameters(), lr=LEARNING_RATE)
         currModel.train()
         for X, y in c.trainLoaders[stepN]:
@@ -123,28 +125,37 @@ def evaluateClients(currModel: MLP):
     totalTrainEntriesClients = {}
     totalTestEntries = 0
     totalTestEntriesClients = {}
+    trainLoss = 0
+    testLoss = 0
+    loss_fn = nn.CrossEntropyLoss(LOSS_FN_WEIGHT)
     with torch.no_grad():
         for c in clients:
             correct = 0
             total = 0
+            batches_nb = 0
             for t in c.trainLoaders:
                 for X, y in t:
                     y_pred = currModel(X)
                     y_pred = (y_pred > 0.5).float()
-
                     correct += (y_pred == y).sum().item()
+                    trainLoss += loss_fn(y_pred, y).item()
                     total += y.size(0) * y.size(1)
+                    batches_nb += 1
+            trainLoss = trainLoss / batches_nb
             trainAcc[c.clientNumber] = correct / total
             totalTrainEntriesClients[c.clientNumber] = total
             totalTrainEntries += total
             correct = 0
             total = 0
+            batches_nb = 0
             for X, y in c.testLoader:
                 y_pred = currModel(X)
                 y_pred = (y_pred > 0.5).float()
-
+                testLoss += loss_fn(y_pred, y).item()
                 correct += (y_pred == y).sum().item()
                 total += y.size(0) * y.size(1)
+                batches_nb += 1
+            testLoss = testLoss / batches_nb
             testAcc[c.clientNumber] = correct / total
             totalTestEntriesClients[c.clientNumber] = total
             totalTestEntries += total
@@ -163,7 +174,7 @@ def evaluateClients(currModel: MLP):
             / totalTestEntries
         )
 
-    return trainAcc, testAcc, globTrainAcc, globTestAcc
+    return trainAcc, testAcc, globTrainAcc, globTestAcc, trainLoss, testLoss
 
 
 # At first, we train a basic model on 10% of all the datas
@@ -174,7 +185,8 @@ trainAccs = {}
 testAccs = {}
 globTrainAcc = []
 globTestAcc = []
-
+trainLosses = []
+testLosses = []
 for c in clients:
     trainAccs[c.clientNumber] = []
     testAccs[c.clientNumber] = []
@@ -182,7 +194,11 @@ for c in clients:
 for n in range(N_EPOCH):
     for i in range(10):
         currModel = doTrainingStep(currModel, i)
-    trainAcc, testAcc, globTrain, globTest = evaluateClients(currModel)
+    trainAcc, testAcc, globTrain, globTest, trainLoss, testLoss = evaluateClients(
+        currModel
+    )
+    trainLosses.append(trainLoss)
+    testLosses.append(testLoss)
     globTrainAcc.append(globTrain)
     globTestAcc.append(globTest)
     for c in trainAcc.keys():
@@ -192,9 +208,12 @@ for n in range(N_EPOCH):
         print(f"Epoch n°{n+1}")
 
 
-def getGraphs(trainAcc, testAcc, currPath, globTrainAcc, globTestAcc):
-    fullPath = currPath + "graphs/"
+def getGraphs(
+    trainAcc, testAcc, currPath, globTrainAcc, globTestAcc, trainLosses, testLosses
+):
+    fullPath = currPath + "accuracy/"
     os.mkdir(fullPath)
+    os.mkdir(currPath + "loss")
     plt.figure()
     plt.plot(range(len(globTrainAcc)), globTrainAcc)
     plt.plot(range(len(globTestAcc)), globTestAcc)
@@ -211,6 +230,13 @@ def getGraphs(trainAcc, testAcc, currPath, globTrainAcc, globTestAcc):
         plt.plot(x, yTest)
         plt.legend(["Train", "Test"])
         plt.savefig(f"{fullPath}client{c.clientNumber}.png")
+    plt.figure()
+    x = range(len(trainLosses))
+    plt.plot(x, trainLosses)
+    plt.plot(x, testLosses)
+    plt.title("Loss function")
+    plt.legend(["Train", "Test"])
+    plt.savefig(f"{currPath}loss/loss.png")
 
 
 index = 0
@@ -222,4 +248,6 @@ while os.path.exists(currPath):
     currPath = f"{BASE_PATH}{CURR_MODEL_NAME}{index}/"
 os.mkdir(currPath)
 torch.save(currModel.state_dict(), currPath + FILENAME)
-getGraphs(trainAccs, testAccs, currPath, globTestAcc, globTrainAcc)
+getGraphs(
+    trainAccs, testAccs, currPath, globTestAcc, globTrainAcc, trainLosses, testLosses
+)
