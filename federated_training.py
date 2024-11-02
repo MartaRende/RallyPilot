@@ -218,6 +218,7 @@ def getGraphs(
     plt.plot(range(len(globTrainAcc)), globTrainAcc)
     plt.plot(range(len(globTestAcc)), globTestAcc)
     plt.legend(["Train", "Test"])
+    plt.title("Model accuracy")
     plt.savefig(f"{fullPath}global.png")
     for c in clients:
         currTrain = trainAcc[c.clientNumber]
@@ -229,12 +230,13 @@ def getGraphs(
         plt.plot(x, yTrain)
         plt.plot(x, yTest)
         plt.legend(["Train", "Test"])
+        plt.title(f"Model accuracy - Client n°{c.clientNumber}")
         plt.savefig(f"{fullPath}client{c.clientNumber}.png")
     plt.figure()
     x = range(len(trainLosses))
     plt.plot(x, trainLosses)
     plt.plot(x, testLosses)
-    plt.title("Loss function")
+    plt.title("Loss function - Federated")
     plt.legend(["Train", "Test"])
     plt.savefig(f"{currPath}loss/loss.png")
 
