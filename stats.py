@@ -1,3 +1,5 @@
+import pandas as pd
+import seaborn as sns
 import numpy as np
 import pickle
 import lzma
@@ -104,6 +106,42 @@ def graphsTooClose():
     pass
 
 
-getSpeedStats(fd_data, lcl_data)
-getRayGraphs()
-graphsTooClose()
+def heatMap():
+
+    def getDataForRay(data):
+        res = []
+        for f in data:
+            res.append(f.raycast_distances)
+        return res
+
+    def getDataForSpeed(data):
+        return [f.car_speed for f in data]
+
+    fig, ax = plt.subplots(
+        1, 4, gridspec_kw={"width_ratios": [1, 3, 3, 1]}, figsize=(15, 10)
+    )
+
+    for i, (d, label) in enumerate([(fd_data, "Federated"), (lcl_data, "Basic")]):
+        speed_df = pd.DataFrame(getDataForSpeed(d), columns=["Speed"])
+        sns.heatmap(speed_df, ax=ax[3 * i])
+        ax[3 * i].set_title(f"{label} - Speed")
+        # Create sample data
+        df = pd.DataFrame(
+            getDataForRay(d),
+            columns=[f"Ray {x + 1}" for x in range(15)],
+        )
+
+        # Plot heatmap
+        sns.heatmap(df, ax=ax[1 + i])
+        ax[1 + i].set_title(f"{label} - Raycast distances")
+    plt.tight_layout()
+    plt.savefig("stats/distances_with_speed.png")
+
+    def getHeatMap(data):
+        sns.heatmap()
+
+
+# getSpeedStats(fd_data, lcl_data)
+# getRayGraphs()
+# graphsTooClose()
+heatMap()
